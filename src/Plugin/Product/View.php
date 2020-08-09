@@ -96,39 +96,58 @@ class View
         if ($pageMainTitle) {
             $pageMainTitle->setPageTitle($product->getName());
         }
-
-        $categories = $product->getCategory()->getPath();
-        $categoryIds = explode('/', $categories);
-
-        $categoriesCollection = null;
-        try {
-            $categoriesCollection = $this->collection
-                ->addFieldToFilter('entity_id', array('in' => $categoryIds))
-                ->addAttributeToSelect('name')
-                ->addAttributeToSelect('url_key')
-                ->addAttributeToSelect('include_in_menu')
-                ->addAttributeToSelect('is_active')
-                ->addAttributeToSelect('is_anchor');
-        } catch (LocalizedException $e) {
-            $breadcrumbsBlock->addCrumb(
-                'product',
-                [
-                    'label' => $product->getName(),
-                    'title' => $product->getName(),
-                ]
-            );
-            return $result;
+        $categoryPath = null;
+        if (!$product->getCategory()) {
+            /** @var \Magento\Catalog\Model\ResourceModel\Category\Collection $categoryCollection */
+            try {
+                $categoryCollection = $product->getCategoryCollection()->addFieldToFilter('is_active', true);
+                $currentLevel = 0;
+                foreach ($categoryCollection->getItems() as $category) {
+                    if ($category->isInRootCategoryList() && $currentLevel < $category->getLevel()) {
+                        $categoryPath = $category->getPath();
+                        $currentLevel = $category->getLevel();
+                    }
+                }
+            } catch (LocalizedException $e) {
+                // do nothing
+            }
+        } else {
+            $categoryPath = $product->getCategory()->getPath();
         }
+        if ($categoryPath) {
+            $categoryIds = explode('/', $categoryPath);
 
-        foreach ($categoriesCollection->getItems() as $category) {
-            /** @var $category Category */
-            if ($category->getIsActive() && $category->isInRootCategoryList()) {
-                $categoryId = $category->getId();
-                $path = [
-                    'label' => $category->getName(),
-                    'link' => $category->getUrl() ? $category->getUrl() : ''
-                ];
-                $breadcrumbsBlock->addCrumb('category_' . $categoryId, $path);
+            $categoriesCollection = null;
+            try {
+                $categoriesCollection = $this->collection
+                    ->addFieldToFilter('entity_id', array('in' => $categoryIds))
+                    ->addAttributeToSelect('name')
+                    ->addAttributeToSelect('url_key')
+                    ->addAttributeToSelect('include_in_menu')
+                    ->addAttributeToSelect('is_active')
+                    ->addAttributeToSelect('is_anchor')
+                ;
+            } catch (LocalizedException $e) {
+                $breadcrumbsBlock->addCrumb(
+                    'product',
+                    [
+                        'label' => $product->getName(),
+                        'title' => $product->getName(),
+                    ]
+                );
+                return $result;
+            }
+            foreach ($categoryIds as $id) {
+                $category = $categoriesCollection->getItemById($id);
+                /** @var $category Category */
+                if ($category->getIsActive() && $category->isInRootCategoryList()) {
+                    $categoryId = $category->getId();
+                    $path = [
+                        'label' => $category->getName(),
+                        'link' => $category->getUrl() ? $category->getUrl() : ''
+                    ];
+                    $breadcrumbsBlock->addCrumb('category_' . $categoryId, $path);
+                }
             }
         }
 
