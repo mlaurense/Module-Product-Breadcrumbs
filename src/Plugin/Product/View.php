@@ -146,7 +146,7 @@ class View
                         'label' => $category->getName(),
                         'link' => $category->getUrl() ? $category->getUrl() : ''
                     ];
-                    $breadcrumbsBlock->addCrumb('category_' . $categoryId, $path);
+                    $breadcrumbsBlock->addCrumb('category' . $categoryId, $path);
                 }
             }
         }
