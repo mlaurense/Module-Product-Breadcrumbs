@@ -140,7 +140,7 @@ class View
             foreach ($categoryIds as $id) {
                 $category = $categoriesCollection->getItemById($id);
                 /** @var $category Category */
-                if ($category->getIsActive() && $category->isInRootCategoryList()) {
+                if ($category && $category->getIsActive() && $category->isInRootCategoryList()) {
                     $categoryId = $category->getId();
                     $path = [
                         'label' => $category->getName(),
